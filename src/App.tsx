@@ -5,16 +5,20 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  Mic,
+  MoreVertical,
   Paperclip,
+  Phone,
   Search,
   Send,
   Settings,
   ShieldCheck,
   Smile,
-  Sparkles,
   Star,
   UserRound,
   Users,
+  Video,
+  X,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
@@ -351,10 +355,28 @@ function Messenger({ profile, demoMode }: { profile: Profile; demoMode: boolean 
 
   const selectedConversation = conversations.find((item) => item.id === selectedConversationId)
   const activeMessages = messages.filter((message) => message.conversation_id === selectedConversationId)
-  const filteredUsers = users.filter((user) => {
-    const value = `${user.full_name} ${user.email}`.toLowerCase()
-    return value.includes(query.toLowerCase())
-  })
+  const chatRows = conversations
+    .map((conversation, index) => {
+      const conversationMessages = messages.filter((message) => message.conversation_id === conversation.id)
+      const latestMessage = conversationMessages.at(-1)
+      const title = conversation.title ?? (conversation.type === 'direct' ? 'Direct chat' : 'Untitled room')
+      const subtitle = latestMessage
+        ? `${latestMessage.sender_id === profile.id ? 'You' : latestMessage.sender_name}: ${
+            latestMessage.attachment_name ?? latestMessage.body
+          }`
+        : 'No messages yet'
+
+      return {
+        ...conversation,
+        title,
+        subtitle,
+        time: latestMessage ? formatTime(latestMessage.created_at) : '',
+        unread: index === 0 ? 2 : 0,
+      }
+    })
+    .filter((conversation) => `${conversation.title} ${conversation.subtitle}`.toLowerCase().includes(query.toLowerCase()))
+  const selectedTitle = selectedConversation?.title ?? 'Company Lobby'
+  const onlineUsers = users.filter((user) => user.status === 'active')
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -448,123 +470,158 @@ function Messenger({ profile, demoMode }: { profile: Profile; demoMode: boolean 
   }
 
   return (
-    <section className="chat-product">
-      <aside className="roster-panel">
-        <div className="roster-top">
-          <button aria-label="Toggle sidebar" className="ghost-icon" type="button">
-            <Menu size={23} />
-          </button>
-          <div>
-            <strong>Connectra</strong>
-            <span>{demoMode ? 'Demo workspace' : 'Live workspace'}</span>
-          </div>
-        </div>
-
-        <div className="roster-search">
-          <Search size={17} />
-          <input aria-label="Search users" onChange={(event) => setQuery(event.target.value)} placeholder="Search" value={query} />
-        </div>
-
-        <div className="mini-tabs">
-          {conversations.map((conversation) => (
-            <button
-              className={clsx(conversation.id === selectedConversationId && 'active')}
-              key={conversation.id}
-              onClick={() => setSelectedConversationId(conversation.id)}
-              type="button"
-            >
-              {conversation.title ?? 'Untitled'}
-            </button>
-          ))}
-        </div>
-
-        <div className="people-list">
-          {filteredUsers.map((user, index) => (
-            <article key={user.id}>
-              <span className={clsx('presence-dot', index % 5 === 0 && 'busy', user.status === 'suspended' && 'offline')} />
-              <div>
-                <strong>{user.full_name}</strong>
-                <small>{user.role === 'admin' ? 'Workspace admin' : user.email}</small>
-              </div>
-            </article>
-          ))}
-        </div>
-      </aside>
-
-      <section className="conversation-panel">
-        <header className="conversation-topbar">
-          <div className="chat-identity">
-            <span className="large-avatar">{getInitials(selectedConversation?.title ?? 'CL')}</span>
+    <section className="whatsapp-shell">
+      <aside className="wa-sidebar">
+        <header className="wa-sidebar-header">
+          <div className="wa-profile-chip">
+            <span className="wa-avatar own-avatar">{getInitials(profile.full_name)}</span>
             <div>
-              <h1>{selectedConversation?.title ?? 'Company Lobby'}</h1>
-              <p>{users.length} employees available</p>
+              <strong>Connectra</strong>
+              <span>{demoMode ? 'Demo workspace' : 'Live workspace'}</span>
             </div>
           </div>
-          <div className="conversation-actions">
-            <button aria-label="Search messages" className="round-tool" type="button">
-              <Search size={21} />
+          <div className="wa-header-actions">
+            <button aria-label="New chat" className="wa-icon-button" type="button">
+              <MessageCircle size={19} />
             </button>
-            <button aria-label="Add people" className="round-tool" type="button">
-              <Users size={21} />
-            </button>
-            <button aria-label="Attach file" className="round-tool" onClick={() => fileInputRef.current?.click()} type="button">
-              <Paperclip size={21} />
+            <button aria-label="Menu" className="wa-icon-button" type="button">
+              <MoreVertical size={20} />
             </button>
           </div>
         </header>
 
-        <div className="message-canvas">
-          <div className="date-divider">
-            <span>Today</span>
+        <div className="wa-search">
+          <Search size={17} />
+          <input aria-label="Search chats" onChange={(event) => setQuery(event.target.value)} placeholder="Search or start new chat" value={query} />
+        </div>
+
+        <div className="wa-status-strip" aria-label="Active employees">
+          {onlineUsers.slice(0, 7).map((user) => (
+            <button key={user.id} type="button">
+              <span className="wa-avatar small">{getInitials(user.full_name)}</span>
+              <span>{user.full_name.split(' ')[0]}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="wa-filter-tabs" aria-label="Chat filters">
+          <button className="active" type="button">
+            All
+          </button>
+          <button type="button">Unread</button>
+          <button type="button">Groups</button>
+        </div>
+
+        <div className="wa-chat-list">
+          {chatRows.map((conversation) => (
+            <button
+              className={clsx('wa-chat-row', conversation.id === selectedConversationId && 'active')}
+              key={conversation.id}
+              onClick={() => setSelectedConversationId(conversation.id)}
+              type="button"
+            >
+              <span className={clsx('wa-avatar', conversation.type === 'group' && 'group')}>
+                {conversation.type === 'group' ? <Users size={19} /> : getInitials(conversation.title)}
+              </span>
+              <span className="wa-chat-copy">
+                <span className="wa-chat-title">
+                  <strong>{conversation.title}</strong>
+                  <time>{conversation.time}</time>
+                </span>
+                <span className="wa-chat-preview">
+                  <span>{conversation.subtitle}</span>
+                  {conversation.unread > 0 && <em>{conversation.unread}</em>}
+                </span>
+              </span>
+            </button>
+          ))}
+          {!chatRows.length && <p className="wa-empty-list">No chats found.</p>}
+        </div>
+      </aside>
+
+      <section className="wa-conversation">
+        <header className="wa-chat-header">
+          <button aria-label="Toggle chat list" className="wa-icon-button mobile-only" type="button">
+            <Menu size={21} />
+          </button>
+          <div className="wa-current-chat">
+            <span className="wa-avatar group">
+              <Users size={20} />
+            </span>
+            <div>
+              <h1>{selectedTitle}</h1>
+              <p>
+                {onlineUsers.length} online · {users.length} employees
+              </p>
+            </div>
           </div>
+          <div className="wa-header-actions">
+            <button aria-label="Voice call" className="wa-icon-button" type="button">
+              <Phone size={19} />
+            </button>
+            <button aria-label="Video call" className="wa-icon-button" type="button">
+              <Video size={20} />
+            </button>
+            <button aria-label="Search messages" className="wa-icon-button" type="button">
+              <Search size={19} />
+            </button>
+          </div>
+        </header>
+
+        <div className="wa-message-area">
+          <div className="wa-date-pill">Today</div>
           {loading && <p className="soft-status">Loading workspace...</p>}
           {status && <p className="soft-status">{status}</p>}
           {!activeMessages.length && !loading && <p className="soft-status">No messages yet. Start the conversation.</p>}
           {activeMessages.map((message) => (
-            <article className={clsx('chat-bubble', message.sender_id === profile.id && 'own')} key={message.id}>
-              <div className="bubble-meta">
-                <strong>{message.sender_name}</strong>
-                <time>{formatTime(message.created_at)}</time>
-              </div>
-              <p>{message.body}</p>
+            <article className={clsx('wa-bubble', message.sender_id === profile.id && 'own')} key={message.id}>
+              <strong className="wa-sender">{message.sender_name}</strong>
+              {message.body && <p>{message.body}</p>}
               {message.attachment_name && (
-                <button className="attachment-pill" onClick={() => openAttachment(message)} type="button">
-                  <FileText size={15} />
-                  {message.attachment_name}
+                <button className="wa-attachment-card" onClick={() => openAttachment(message)} type="button">
+                  <FileText size={20} />
+                  <span>
+                    <strong>{message.attachment_name}</strong>
+                    <small>Tap to open</small>
+                  </span>
                 </button>
               )}
-              {message.sender_id === profile.id && <CheckCheck className="read-check" size={15} />}
+              <span className="wa-message-meta">
+                <time>{formatTime(message.created_at)}</time>
+                {message.sender_id === profile.id && <CheckCheck size={16} />}
+              </span>
             </article>
           ))}
         </div>
 
-        <form className="message-composer" onSubmit={sendMessage}>
-          <button aria-label="Emoji" className="round-tool" type="button">
+        {selectedFile && (
+          <div className="wa-file-preview">
+            <FileText size={18} />
+            <span>{selectedFile.name}</span>
+            <button aria-label="Remove selected file" onClick={() => setSelectedFile(null)} type="button">
+              <X size={17} />
+            </button>
+          </div>
+        )}
+
+        <form className="wa-composer" onSubmit={sendMessage}>
+          <button aria-label="Emoji" className="wa-icon-button" type="button">
             <Smile size={22} />
           </button>
-          <div className="composer-input">
+          <input className="hidden-file-input" onChange={pickFile} ref={fileInputRef} type="file" />
+          <button aria-label="Attach file" className="wa-icon-button" onClick={() => fileInputRef.current?.click()} type="button">
+            <Paperclip size={22} />
+          </button>
+          <div className="wa-message-input">
             <input
               aria-label="Message"
               onChange={(event) => setDraft(event.target.value)}
               placeholder={selectedFile ? 'Add a caption' : 'Type a message'}
               value={draft}
             />
-            {selectedFile && (
-              <button className="selected-file" onClick={() => setSelectedFile(null)} type="button">
-                <FileText size={14} />
-                {selectedFile.name}
-              </button>
-            )}
           </div>
-          <button aria-label="AI assist" className="ai-tool" type="button">
-            <Sparkles size={22} />
-          </button>
-          <input className="hidden-file-input" onChange={pickFile} ref={fileInputRef} type="file" />
-          <button aria-label="Attach file" className="round-tool" onClick={() => fileInputRef.current?.click()} type="button">
-            <Paperclip size={22} />
-          </button>
-          <button aria-label="Send" className="send-tool" disabled={uploading} type="submit">
-            <Send size={21} />
+          <button aria-label={draft.trim() || selectedFile ? 'Send' : 'Voice message'} className="wa-send-button" disabled={uploading} type="submit">
+            {draft.trim() || selectedFile ? <Send size={20} /> : <Mic size={21} />}
           </button>
         </form>
       </section>
