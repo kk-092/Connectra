@@ -13,14 +13,15 @@ Private company chat and file sharing web app for small teams.
 
 1. Create a Supabase project.
 2. Run `supabase/migrations/20260718120000_initial_connectra.sql` in Supabase SQL editor.
-3. Create private storage buckets:
+3. Run `supabase/migrations/20260719093000_company_lobby.sql` in Supabase SQL editor.
+4. Create private storage buckets:
    - `avatars`
    - `chat-attachments`
-4. Deploy `supabase/functions/create-employee`.
-5. Add the following values in Cloudflare Pages environment variables:
+5. Deploy `supabase/functions/create-employee`.
+6. Add the following values in Cloudflare Pages environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-6. Create the first admin user from Supabase Auth dashboard, then insert its profile row:
+7. Create the first admin user from Supabase Auth dashboard, then insert its profile row:
 
 ```sql
 insert into public.profiles (id, full_name, email, role, status)
